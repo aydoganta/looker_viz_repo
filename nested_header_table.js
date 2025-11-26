@@ -17,9 +17,9 @@ const viz = {
         .nh-container { overflow:auto; max-width:100%; font-family: Inter, Roboto, Arial, sans-serif; }
         .nh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .nh-table th, .nh-table td { border: 1px solid #A6A6A6; padding: 6px 8px; vertical-align: middle; }
-        .nh-table thead th { background: #F0F0FA !important; font-weight:700; }
-        .nh-top-header { background:#F0F0FA !important; color: #1F1F1F; font-weight:700; text-align:center; padding:10px 6px; }
-        .nh-sub-header { background:#F0F0FA !important; color: #1F1F1F; font-weight:600; text-align:center; padding:8px 6px; }
+        .nh-table thead th { background: #FAF7ED !important; font-weight:700; }
+        .nh-top-header { background:#FAF7ED !important; color: #1F1F1F; font-weight:700; text-align:center; padding:10px 6px; }
+        .nh-sub-header { background:#FAF7ED !important; color: #1F1F1F; font-weight:600; text-align:center; padding:8px 6px; }
         .nh-left { text-align:left; font-weight:700; background:#fff; white-space:nowrap; }
         .nh-num { text-align:center; white-space:nowrap; }
         .nh-percent { text-align:center; white-space:nowrap; }
