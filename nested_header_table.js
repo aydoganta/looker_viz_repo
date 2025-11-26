@@ -1,9 +1,9 @@
-// Nested Header Table - Full version with group frame borders + styling + attainment coloring
-// Paste this entire file as nested_header_table.js in your Gist or Github Pages repo (replace previous).
+// Nested Header Table - Styled (COLOR FIX for Attainment)
+// Paste entire file into your GitHub Gist / Pages JS and use raw URL in Looker Admin -> Visualizations -> Main.
 
 const viz = {
-  id: "nested-header-table-full",
-  label: "Nested Header Table - Full",
+  id: "nested-header-table-styled",
+  label: "Nested Header Table - Styled",
   options: {
     group_prefixes: { type: "string", label: "Group Prefixes (comma separated, optional)", default: "" },
     percentage_columns: { type: "string", label: "Columns to format as percent (comma separated - default: Attainment)", default: "Attainment" },
@@ -14,60 +14,18 @@ const viz = {
   create: function(element) {
     element.innerHTML = `
       <style>
-        /* Layout & Typography */
         .nh-container { overflow:auto; max-width:100%; font-family: Inter, Roboto, Arial, sans-serif; }
-        .nh-table { width: 100%; border-collapse: collapse; font-size: 12px; } /* smaller font */
+        .nh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .nh-table th, .nh-table td { border: 1px solid #e6e6e6; padding: 6px 8px; vertical-align: middle; }
-        .nh-table thead th { position: sticky; top: 0; z-index: 4; }
-
-        /* 🔵 TOP & SUB HEADERS — BLUE + WHITE */
-        .nh-top-header {
-          background: #1A73E8 !important;
-          color: #FFFFFF !important;
-          font-weight: 700;
-          text-align: center;
-          padding: 10px 6px;
-          border-top: 2px solid #7da1d9;
-          border-bottom: 2px solid #7da1d9;
-        }
-
-        .nh-sub-header {
-          background: #1A73E8 !important;
-          color: #FFFFFF !important;
-          font-weight: 600;
-          text-align: center;
-          padding: 8px 6px;
-          border-top: 1px solid #e6e6e6;
-          border-bottom: 1px solid #e6e6e6;
-        }
-
-        /* Left side dimension header */
-        .nh-left {
-          text-align:left;
-          font-weight:700;
-          background:#fff;
-          white-space:nowrap;
-        }
-
-        /* Numeric cells centered */
-        .nh-num, .nh-percent {
-          text-align:center;
-          white-space:nowrap;
-        }
-
-        /* Hover highlight for rows */
+        .nh-table thead th { background: #f5f7fb; font-weight:700; }
+        .nh-top-header { background:#cfe3ff; font-weight:700; text-align:center; padding:10px 6px; }
+        .nh-sub-header { background:#eef6ff; font-weight:600; text-align:center; padding:8px 6px; }
+        .nh-left { text-align:left; font-weight:700; background:#fff; white-space:nowrap; }
+        .nh-num { text-align:center; white-space:nowrap; }
+        .nh-percent { text-align:center; white-space:nowrap; }
         .nh-table tbody tr:hover { background: #fbfdff; }
-
-        /* Group frame classes for thicker vertical borders */
-        .group-left { border-left: 3px solid #B0B7C0 !important; }
-        .group-right { border-right: 3px solid #B0B7C0 !important; }
-        td.group-left { border-left: 3px solid #B0B7C0 !important; }
-        td.group-right { border-right: 3px solid #B0B7C0 !important; }
-
-        /* Attainment text contrast helper */
-        .attainment-positive { color: #063; }
-        .attainment-negative { color: #800; }
-
+        .nh-container { position: relative; }
+        .nh-table thead th { position: sticky; top: 0; z-index: 2; }
       </style>
       <div class="nh-container">
         <table class="nh-table">
@@ -79,7 +37,7 @@ const viz = {
     this._table = element.querySelector(".nh-table");
     this._thead = element.querySelector(".nh-table thead");
     this._tbody = element.querySelector(".nh-table tbody");
-    console.log("[NestedViz Full] create()");
+    console.log("[NestedViz Styled] create()");
   },
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
@@ -104,7 +62,6 @@ const viz = {
         return;
       }
 
-      // Parse labels e.g. "LTV | Actual"
       function parseLabel(lbl) {
         if (!lbl) return {group: null, sub: ""};
         if (lbl.indexOf("|") !== -1) {
@@ -114,7 +71,6 @@ const viz = {
         return {group: null, sub: lbl};
       }
 
-      // Build measuresInfo
       const measuresInfo = meas.map(m => {
         const lbl = (m.label_short || m.label || m.name || "").toString();
         const parsed = parseLabel(lbl);
@@ -122,12 +78,11 @@ const viz = {
           name: m.name,
           fieldObj: m,
           fullLabel: lbl,
-          group: parsed.group, // null if not provided
+          group: parsed.group,
           sub: parsed.sub || parsed.group || lbl
         };
       });
 
-      // If no groups provided, fallback to config or "Metrics"
       const anyGroup = measuresInfo.some(mi => mi.group !== null);
       let prefixes = [];
       if (!anyGroup) {
@@ -150,16 +105,8 @@ const viz = {
         });
       }
 
-      // compute group ranges (start/end indexes across measuresInfo)
-      const groupRanges = {};
-      measuresInfo.forEach((mi, idx) => {
-        if (!groupRanges[mi.group]) groupRanges[mi.group] = { start: idx, end: idx };
-        else groupRanges[mi.group].end = idx;
-      });
-
       const groupOrder = [...new Set(measuresInfo.map(mi => mi.group))];
 
-      // Build top header row
       const topRow = document.createElement("tr");
       const leftTop = document.createElement("th");
       leftTop.className = "nh-left";
@@ -177,27 +124,17 @@ const viz = {
       });
       this._thead.appendChild(topRow);
 
-      // Build sub header row and add group-left/right classes to the subheaders at group edges
       const subRow = document.createElement("tr");
-      measuresInfo.forEach((mi, idx) => {
+      measuresInfo.forEach(mi => {
         const th = document.createElement("th");
         th.className = "nh-sub-header";
         th.innerText = mi.sub;
-        const range = groupRanges[mi.group];
-        if (range) {
-          if (idx === range.start) th.classList.add("group-left");
-          if (idx === range.end) th.classList.add("group-right");
-        }
         subRow.appendChild(th);
       });
       this._thead.appendChild(subRow);
 
-      // ---------- helpers ----------
       const percentKeywords = (config.percentage_columns || "Attainment").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-      function isPercentByKeyword(subLabel, groupName) {
-        if (!subLabel && !groupName) return false;
-        // group based common cases
-        if (groupName && /retention|purchase\s*cr|purchase_cr/i.test(groupName)) return true;
+      function isPercentByKeyword(subLabel) {
         if (!subLabel) return false;
         return percentKeywords.some(k => k && subLabel.toLowerCase().indexOf(k) !== -1);
       }
@@ -234,22 +171,23 @@ const viz = {
         return rgbToHex(R, G, Bc);
       }
 
-      // Colors (updated: vivid red/green)
-      const lightRed = "#fff2f2";
-      const darkRed  = "#cc0000";
+      // UPDATED COLORS & MAPPING:
+      // For percent < 100: percent closer to 100 => lighter red; farther from 100 => darker red.
+      // For percent >=100: percent closer to 100 => lighter green; higher => darker green.
+      const lightRed = "#fff2f2";   // very light red
+      const darkRed  = "#cc0000";   // vivid dark red
       const lightGreen = "#e6f7e6";
-      const darkGreen  = "#007a2e";
+      const darkGreen  = "#007a2e"; // more vivid dark green
 
-      // attainmentColor: percent as 0..100+ (e.g. 89.7 or 120.5)
       function attainmentColor(percent) {
         if (percent === null || typeof percent === "undefined" || isNaN(percent)) return "";
         if (percent < 100) {
-          // percent closer to 100 => lighter red (t near 0), lower percent => darker red (t near 1)
-          const t = 1 - Math.max(0, Math.min(100, percent)) / 100; // 100->0, 0->1
+          // map percent [0..100] to t in [1..0] so that 100 => light, 0 => dark
+          const t = 1 - Math.max(0, Math.min(100, percent)) / 100;
           return mixHex(lightRed, darkRed, t);
         } else {
           const capped = Math.min(200, percent);
-          const t = Math.max(0, Math.min(1, (capped - 100) / 100)); // 100->0, 200->1
+          const t = Math.max(0, Math.min(1, (capped - 100) / 100)); // 0 -> light, 1 -> dark
           return mixHex(lightGreen, darkGreen, t);
         }
       }
@@ -263,12 +201,10 @@ const viz = {
         return key ? row[key] : null;
       }
 
-      // ---------- build body ----------
       for (let r = 0; r < rowLimit; r++) {
         const row = data[r];
         const tr = document.createElement("tr");
 
-        // dims
         dims.forEach(d => {
           const td = document.createElement("td");
           td.className = "nh-left";
@@ -283,8 +219,7 @@ const viz = {
           tr.appendChild(td);
         });
 
-        // measures in order (with group-edge classes on td)
-        measuresInfo.forEach((mi, idx) => {
+        measuresInfo.forEach(mi => {
           const td = document.createElement("td");
           td.className = "nh-num";
           const cell = getCell(row, mi.name);
@@ -294,7 +229,7 @@ const viz = {
             display = cell.rendered;
           } else if (cell && typeof cell.value !== "undefined" && cell.value !== null) {
             const val = cell.value;
-            if (isPercentByKeyword(mi.sub, mi.group)) {
+            if (isPercentByKeyword(mi.sub) || /retention|purchase\s*cr|purchase_cr/i.test((mi.group||""))) {
               let pct;
               if (typeof val === "number") {
                 if (val <= 1.5) pct = val * 100;
@@ -316,14 +251,6 @@ const viz = {
 
           td.innerHTML = display;
 
-          // add group edge classes
-          const range = groupRanges[mi.group];
-          if (range) {
-            if (idx === range.start) td.classList.add("group-left");
-            if (idx === range.end) td.classList.add("group-right");
-          }
-
-          // Conditional formatting for Attainment columns
           const isAttainment = /attainment/i.test(mi.sub) || /attainment/i.test(mi.fullLabel);
           if (isAttainment) {
             let percent = null;
@@ -341,15 +268,13 @@ const viz = {
             }
             if (percent !== null && !isNaN(percent)) {
               const bg = attainmentColor(percent);
-              if (bg) {
-                td.style.background = bg;
-                // improved contrast: compute luminance and choose white text if background dark
-                try {
-                  const c = hexToRgb(bg);
-                  const lum = 0.2126*c.r + 0.7152*c.g + 0.0722*c.b;
-                  td.style.color = (lum < 120) ? "white" : "inherit";
-                } catch(e){}
-              }
+              td.style.background = bg;
+              // improved contrast: compute luminance and choose white text if background dark
+              try {
+                const c = hexToRgb(bg);
+                const lum = 0.2126*c.r + 0.7152*c.g + 0.0722*c.b;
+                td.style.color = (lum < 120) ? "white" : "inherit";
+              } catch(e){}
             }
           }
 
@@ -361,18 +286,15 @@ const viz = {
 
       done();
     } catch (err) {
-      console.error("[NestedViz Full] error", err);
+      console.error("[NestedViz Styled] error", err);
       this.addError({ title: "Visualization error", message: err && err.message ? err.message : String(err)});
       done();
     }
   },
 
-  destroy: function(element) {
-    // no-op
-  }
+  destroy: function(element) { }
 };
 
-// register viz
 if (typeof looker !== "undefined" && looker.plugins && looker.plugins.visualizations) {
   looker.plugins.visualizations.add(viz);
 } else {
