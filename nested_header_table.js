@@ -1,9 +1,9 @@
-// Nested Header Table - Attainment Narrow + Group Frame (Version B)
-// Paste as nested_header_table_attainment_narrow_groupframe.js in your Gist/Pages and use raw URL in Looker.
+// Nested Header Table - Attainment Narrow (Version A)
+// Paste as nested_header_table_attainment_narrow.js in your Gist/Pages and use raw URL in Looker.
 
 const viz = {
-  id: "nested-header-table-attainment-groupframe",
-  label: "Nested Header Table - Attainment Narrow + Group Frame",
+  id: "nested-header-table-attainment-narrow",
+  label: "Nested Header Table - Attainment Narrow",
   options: {
     group_prefixes: { type: "string", label: "Group Prefixes (comma separated, optional)", default: "" },
     percentage_columns: { type: "string", label: "Columns to format as percent (comma separated - default: Attainment)", default: "Attainment" },
@@ -14,7 +14,6 @@ const viz = {
   create: function(element) {
     element.innerHTML = `
       <style>
-        /* Layout & Typography */
         .nh-container { overflow:auto; max-width:100%; font-family: Inter, Roboto, Arial, sans-serif; }
         .nh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .nh-table th, .nh-table td { border: 1px solid #e6e6e6; padding: 6px 8px; vertical-align: middle; }
@@ -27,19 +26,13 @@ const viz = {
 
         /* Narrow attainment column */
         th.attainment-col, td.attainment-col {
-          width: 90px;
+          width: 90px;              /* dar genişlik - isteğe göre 80/100 ayarla */
           max-width: 90px;
           min-width: 70px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
         }
-
-        /* Group frame: make vertical borders thicker on group edges */
-        .group-left { border-left: 3px solid #B0B7C0 !important; }
-        .group-right { border-right: 3px solid #B0B7C0 !important; }
-        td.group-left { border-left: 3px solid #B0B7C0 !important; }
-        td.group-right { border-right: 3px solid #B0B7C0 !important; }
 
         .nh-table tbody tr:hover { background: #fbfdff; }
         .nh-container { position: relative; }
@@ -55,7 +48,7 @@ const viz = {
     this._table = element.querySelector(".nh-table");
     this._thead = element.querySelector(".nh-table thead");
     this._tbody = element.querySelector(".nh-table tbody");
-    console.log("[NestedViz B] create()");
+    console.log("[NestedViz A] create()");
   },
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
@@ -123,13 +116,6 @@ const viz = {
         });
       }
 
-      // compute group ranges for thick frame borders
-      const groupRanges = {};
-      measuresInfo.forEach((mi, idx) => {
-        if (!groupRanges[mi.group]) groupRanges[mi.group] = { start: idx, end: idx };
-        else groupRanges[mi.group].end = idx;
-      });
-
       const groupOrder = [...new Set(measuresInfo.map(mi => mi.group))];
 
       const topRow = document.createElement("tr");
@@ -150,44 +136,22 @@ const viz = {
       this._thead.appendChild(topRow);
 
       const subRow = document.createElement("tr");
-      measuresInfo.forEach((mi, idx) => {
+      measuresInfo.forEach(mi => {
         const th = document.createElement("th");
         th.className = "nh-sub-header";
         th.innerText = mi.sub;
-        // add attainment-col on Attainment headers
-        if (/attainment/i.test(mi.sub) || /attainment/i.test(mi.fullLabel)) th.classList.add("attainment-col");
-        // add group-edge classes for thicker frame
-        const range = groupRanges[mi.group];
-        if (range) {
-          if (idx === range.start) th.classList.add("group-left");
-          if (idx === range.end) th.classList.add("group-right");
+        // add attainment-col class to subheaders that are Attainment
+        if (/attainment/i.test(mi.sub) || /attainment/i.test(mi.fullLabel)) {
+          th.classList.add("attainment-col");
         }
         subRow.appendChild(th);
       });
       this._thead.appendChild(subRow);
 
       const percentKeywords = (config.percentage_columns || "Attainment").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-      function isPercentByKeyword(subLabel, groupName) {
-        if (!subLabel && !groupName) return false;
-        if (groupName && /retention|purchase\s*cr|purchase_cr/i.test(groupName)) return true;
+      function isPercentByKeyword(subLabel) {
         if (!subLabel) return false;
         return percentKeywords.some(k => k && subLabel.toLowerCase().indexOf(k) !== -1);
-      }
-
-      function extractNumeric(cell) {
-        if (!cell) return null;
-        if (typeof cell.value === "number" && isFinite(cell.value)) return cell.value;
-        if (cell.rendered && typeof cell.rendered === "string") {
-          const s = cell.rendered.trim();
-          if (s.indexOf("%") !== -1) {
-            const n = parseFloat(s.replace(/[^0-9\.\-]+/g, ""));
-            return isNaN(n) ? null : n;
-          }
-          const numOnly = s.replace(/[^0-9\.\-]+/g, "");
-          const n = parseFloat(numOnly);
-          return isNaN(n) ? null : n;
-        }
-        return null;
       }
 
       function hexToRgb(hex) {
@@ -250,7 +214,7 @@ const viz = {
           tr.appendChild(td);
         });
 
-        measuresInfo.forEach((mi, idx) => {
+        measuresInfo.forEach(mi => {
           const td = document.createElement("td");
           td.className = "nh-num";
           const cell = getCell(row, mi.name);
@@ -260,7 +224,7 @@ const viz = {
             display = cell.rendered;
           } else if (cell && typeof cell.value !== "undefined" && cell.value !== null) {
             const val = cell.value;
-            if (isPercentByKeyword(mi.sub, mi.group)) {
+            if (isPercentByKeyword(mi.sub) || /retention|purchase\s*cr|purchase_cr/i.test((mi.group||""))) {
               let pct;
               if (typeof val === "number") {
                 if (val <= 1.5) pct = val * 100;
@@ -282,14 +246,7 @@ const viz = {
 
           td.innerHTML = display;
 
-          // group-edge classes for thicker frame
-          const range = groupRanges[mi.group];
-          if (range) {
-            if (idx === range.start) td.classList.add("group-left");
-            if (idx === range.end) td.classList.add("group-right");
-          }
-
-          // add attainment-col class to Attainment cells
+          // add attainment-col class to body cells
           if (/attainment/i.test(mi.sub) || /attainment/i.test(mi.fullLabel)) {
             td.classList.add("attainment-col");
           }
@@ -328,7 +285,7 @@ const viz = {
 
       done();
     } catch (err) {
-      console.error("[NestedViz B] error", err);
+      console.error("[NestedViz A] error", err);
       this.addError({ title: "Visualization error", message: err && err.message ? err.message : String(err)});
       done();
     }
