@@ -1,9 +1,9 @@
-// Nested Header Table - Styled (COLOR FIX for Attainment)
-// Paste entire file into your GitHub Gist / Pages JS and use raw URL in Looker Admin -> Visualizations -> Main.
+// Nested Header Table - Attainment Narrow + Group Frame (Version B)
+// Paste as nested_header_table_attainment_narrow_groupframe.js in your Gist/Pages and use raw URL in Looker.
 
 const viz = {
-  id: "nested-header-table-styled",
-  label: "Nested Header Table - Styled",
+  id: "nested-header-table-attainment-groupframe",
+  label: "Nested Header Table - Attainment Narrow + Group Frame",
   options: {
     group_prefixes: { type: "string", label: "Group Prefixes (comma separated, optional)", default: "" },
     percentage_columns: { type: "string", label: "Columns to format as percent (comma separated - default: Attainment)", default: "Attainment" },
@@ -14,6 +14,7 @@ const viz = {
   create: function(element) {
     element.innerHTML = `
       <style>
+        /* Layout & Typography */
         .nh-container { overflow:auto; max-width:100%; font-family: Inter, Roboto, Arial, sans-serif; }
         .nh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .nh-table th, .nh-table td { border: 1px solid #e6e6e6; padding: 6px 8px; vertical-align: middle; }
@@ -23,6 +24,23 @@ const viz = {
         .nh-left { text-align:left; font-weight:700; background:#fff; white-space:nowrap; }
         .nh-num { text-align:center; white-space:nowrap; }
         .nh-percent { text-align:center; white-space:nowrap; }
+
+        /* Narrow attainment column */
+        th.attainment-col, td.attainment-col {
+          width: 90px;
+          max-width: 90px;
+          min-width: 70px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        /* Group frame: make vertical borders thicker on group edges */
+        .group-left { border-left: 3px solid #B0B7C0 !important; }
+        .group-right { border-right: 3px solid #B0B7C0 !important; }
+        td.group-left { border-left: 3px solid #B0B7C0 !important; }
+        td.group-right { border-right: 3px solid #B0B7C0 !important; }
+
         .nh-table tbody tr:hover { background: #fbfdff; }
         .nh-container { position: relative; }
         .nh-table thead th { position: sticky; top: 0; z-index: 2; }
@@ -37,7 +55,7 @@ const viz = {
     this._table = element.querySelector(".nh-table");
     this._thead = element.querySelector(".nh-table thead");
     this._tbody = element.querySelector(".nh-table tbody");
-    console.log("[NestedViz Styled] create()");
+    console.log("[NestedViz B] create()");
   },
 
   updateAsync: function(data, element, config, queryResponse, details, done) {
@@ -105,6 +123,13 @@ const viz = {
         });
       }
 
+      // compute group ranges for thick frame borders
+      const groupRanges = {};
+      measuresInfo.forEach((mi, idx) => {
+        if (!groupRanges[mi.group]) groupRanges[mi.group] = { start: idx, end: idx };
+        else groupRanges[mi.group].end = idx;
+      });
+
       const groupOrder = [...new Set(measuresInfo.map(mi => mi.group))];
 
       const topRow = document.createElement("tr");
@@ -125,16 +150,26 @@ const viz = {
       this._thead.appendChild(topRow);
 
       const subRow = document.createElement("tr");
-      measuresInfo.forEach(mi => {
+      measuresInfo.forEach((mi, idx) => {
         const th = document.createElement("th");
         th.className = "nh-sub-header";
         th.innerText = mi.sub;
+        // add attainment-col on Attainment headers
+        if (/attainment/i.test(mi.sub) || /attainment/i.test(mi.fullLabel)) th.classList.add("attainment-col");
+        // add group-edge classes for thicker frame
+        const range = groupRanges[mi.group];
+        if (range) {
+          if (idx === range.start) th.classList.add("group-left");
+          if (idx === range.end) th.classList.add("group-right");
+        }
         subRow.appendChild(th);
       });
       this._thead.appendChild(subRow);
 
       const percentKeywords = (config.percentage_columns || "Attainment").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-      function isPercentByKeyword(subLabel) {
+      function isPercentByKeyword(subLabel, groupName) {
+        if (!subLabel && !groupName) return false;
+        if (groupName && /retention|purchase\s*cr|purchase_cr/i.test(groupName)) return true;
         if (!subLabel) return false;
         return percentKeywords.some(k => k && subLabel.toLowerCase().indexOf(k) !== -1);
       }
@@ -171,23 +206,19 @@ const viz = {
         return rgbToHex(R, G, Bc);
       }
 
-      // UPDATED COLORS & MAPPING:
-      // For percent < 100: percent closer to 100 => lighter red; farther from 100 => darker red.
-      // For percent >=100: percent closer to 100 => lighter green; higher => darker green.
-      const lightRed = "#fff2f2";   // very light red
-      const darkRed  = "#cc0000";   // vivid dark red
+      const lightRed = "#fff2f2";
+      const darkRed  = "#cc0000";
       const lightGreen = "#e6f7e6";
-      const darkGreen  = "#007a2e"; // more vivid dark green
+      const darkGreen  = "#007a2e";
 
       function attainmentColor(percent) {
         if (percent === null || typeof percent === "undefined" || isNaN(percent)) return "";
         if (percent < 100) {
-          // map percent [0..100] to t in [1..0] so that 100 => light, 0 => dark
           const t = 1 - Math.max(0, Math.min(100, percent)) / 100;
           return mixHex(lightRed, darkRed, t);
         } else {
           const capped = Math.min(200, percent);
-          const t = Math.max(0, Math.min(1, (capped - 100) / 100)); // 0 -> light, 1 -> dark
+          const t = Math.max(0, Math.min(1, (capped - 100) / 100));
           return mixHex(lightGreen, darkGreen, t);
         }
       }
@@ -219,7 +250,7 @@ const viz = {
           tr.appendChild(td);
         });
 
-        measuresInfo.forEach(mi => {
+        measuresInfo.forEach((mi, idx) => {
           const td = document.createElement("td");
           td.className = "nh-num";
           const cell = getCell(row, mi.name);
@@ -229,7 +260,7 @@ const viz = {
             display = cell.rendered;
           } else if (cell && typeof cell.value !== "undefined" && cell.value !== null) {
             const val = cell.value;
-            if (isPercentByKeyword(mi.sub) || /retention|purchase\s*cr|purchase_cr/i.test((mi.group||""))) {
+            if (isPercentByKeyword(mi.sub, mi.group)) {
               let pct;
               if (typeof val === "number") {
                 if (val <= 1.5) pct = val * 100;
@@ -251,6 +282,18 @@ const viz = {
 
           td.innerHTML = display;
 
+          // group-edge classes for thicker frame
+          const range = groupRanges[mi.group];
+          if (range) {
+            if (idx === range.start) td.classList.add("group-left");
+            if (idx === range.end) td.classList.add("group-right");
+          }
+
+          // add attainment-col class to Attainment cells
+          if (/attainment/i.test(mi.sub) || /attainment/i.test(mi.fullLabel)) {
+            td.classList.add("attainment-col");
+          }
+
           const isAttainment = /attainment/i.test(mi.sub) || /attainment/i.test(mi.fullLabel);
           if (isAttainment) {
             let percent = null;
@@ -269,7 +312,6 @@ const viz = {
             if (percent !== null && !isNaN(percent)) {
               const bg = attainmentColor(percent);
               td.style.background = bg;
-              // improved contrast: compute luminance and choose white text if background dark
               try {
                 const c = hexToRgb(bg);
                 const lum = 0.2126*c.r + 0.7152*c.g + 0.0722*c.b;
@@ -286,7 +328,7 @@ const viz = {
 
       done();
     } catch (err) {
-      console.error("[NestedViz Styled] error", err);
+      console.error("[NestedViz B] error", err);
       this.addError({ title: "Visualization error", message: err && err.message ? err.message : String(err)});
       done();
     }
