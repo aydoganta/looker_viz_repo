@@ -1,4 +1,4 @@
-// Nested Header Table - Styling + Attainment Conditional Formatting
+// Nested Header Table - Styled (COLOR FIX for Attainment)
 // Paste entire file into your GitHub Gist / Pages JS and use raw URL in Looker Admin -> Visualizations -> Main.
 
 const viz = {
@@ -14,31 +14,18 @@ const viz = {
   create: function(element) {
     element.innerHTML = `
       <style>
-        /* Layout & Typography */
         .nh-container { overflow:auto; max-width:100%; font-family: Inter, Roboto, Arial, sans-serif; }
-        .nh-table { width: 100%; border-collapse: collapse; font-size: 12px; } /* smaller font */
+        .nh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .nh-table th, .nh-table td { border: 1px solid #e6e6e6; padding: 6px 8px; vertical-align: middle; }
         .nh-table thead th { background: #f5f7fb; font-weight:700; }
-        /* Top group headers */
         .nh-top-header { background:#cfe3ff; font-weight:700; text-align:center; padding:10px 6px; }
         .nh-sub-header { background:#eef6ff; font-weight:600; text-align:center; padding:8px 6px; }
-        /* Left dimension header (App Name) should be left-aligned */
         .nh-left { text-align:left; font-weight:700; background:#fff; white-space:nowrap; }
-        /* Numeric cells centered */
         .nh-num { text-align:center; white-space:nowrap; }
         .nh-percent { text-align:center; white-space:nowrap; }
-
-        /* Hover highlight for rows */
         .nh-table tbody tr:hover { background: #fbfdff; }
-
-        /* Attainment coloring helper classes (fallback) */
-        .attainment-positive { color: #063; }
-        .attainment-negative { color: #800; }
-
-        /* Make header sticky when scrolling horizontally */
         .nh-container { position: relative; }
         .nh-table thead th { position: sticky; top: 0; z-index: 2; }
-
       </style>
       <div class="nh-container">
         <table class="nh-table">
@@ -75,7 +62,6 @@ const viz = {
         return;
       }
 
-      // parse label "Group | Sub"
       function parseLabel(lbl) {
         if (!lbl) return {group: null, sub: ""};
         if (lbl.indexOf("|") !== -1) {
@@ -92,12 +78,11 @@ const viz = {
           name: m.name,
           fieldObj: m,
           fullLabel: lbl,
-          group: parsed.group, // null if not provided
+          group: parsed.group,
           sub: parsed.sub || parsed.group || lbl
         };
       });
 
-      // If no groups found, fallback to config.group_prefixes
       const anyGroup = measuresInfo.some(mi => mi.group !== null);
       let prefixes = [];
       if (!anyGroup) {
@@ -122,7 +107,6 @@ const viz = {
 
       const groupOrder = [...new Set(measuresInfo.map(mi => mi.group))];
 
-      // Build headers
       const topRow = document.createElement("tr");
       const leftTop = document.createElement("th");
       leftTop.className = "nh-left";
@@ -149,27 +133,21 @@ const viz = {
       });
       this._thead.appendChild(subRow);
 
-      // percentage detection function (improved)
       const percentKeywords = (config.percentage_columns || "Attainment").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
       function isPercentByKeyword(subLabel) {
         if (!subLabel) return false;
         return percentKeywords.some(k => k && subLabel.toLowerCase().indexOf(k) !== -1);
       }
 
-      // Helper to parse numeric value from Looker cell
       function extractNumeric(cell) {
         if (!cell) return null;
-        // prefer numeric value
         if (typeof cell.value === "number" && isFinite(cell.value)) return cell.value;
-        // fallback: parse rendered string
         if (cell.rendered && typeof cell.rendered === "string") {
           const s = cell.rendered.trim();
-          // percent format like "45.7%"
           if (s.indexOf("%") !== -1) {
             const n = parseFloat(s.replace(/[^0-9\.\-]+/g, ""));
-            return isNaN(n) ? null : n; // returned as percent number (e.g. 45.7)
+            return isNaN(n) ? null : n;
           }
-          // money format like "$1.5"
           const numOnly = s.replace(/[^0-9\.\-]+/g, "");
           const n = parseFloat(numOnly);
           return isNaN(n) ? null : n;
@@ -177,7 +155,6 @@ const viz = {
         return null;
       }
 
-      // utility: interpolate color between two hex colors by ratio [0..1]
       function hexToRgb(hex) {
         const h = hex.replace("#", "");
         return { r: parseInt(h.substring(0,2),16), g: parseInt(h.substring(2,4),16), b: parseInt(h.substring(4,6),16) };
@@ -194,31 +171,29 @@ const viz = {
         return rgbToHex(R, G, Bc);
       }
 
-      // Attainment color function: percentNumber e.g. 89.7 or 120.5
-      function attainmentColor(percent) {
-        // below 100 -> map 0..100 to light red -> dark red
-        // above 100 -> map 100..200 to light green -> dark green (cap to 200)
-        const lightRed = "#fff0f0";
-        const darkRed  = "#8b0000";
-        const lightGreen = "#e6f7e6";
-        const darkGreen  = "#0b6623";
+      // UPDATED COLORS & MAPPING:
+      // For percent < 100: percent closer to 100 => lighter red; farther from 100 => darker red.
+      // For percent >=100: percent closer to 100 => lighter green; higher => darker green.
+      const lightRed = "#fff2f2";   // very light red
+      const darkRed  = "#cc0000";   // vivid dark red
+      const lightGreen = "#e6f7e6";
+      const darkGreen  = "#007a2e"; // more vivid dark green
 
+      function attainmentColor(percent) {
         if (percent === null || typeof percent === "undefined" || isNaN(percent)) return "";
         if (percent < 100) {
-          const t = Math.max(0, Math.min(1, percent / 100)); // 0->0%, 1->100%
-          // invert t so 0 => very light, 1 => dark
+          // map percent [0..100] to t in [1..0] so that 100 => light, 0 => dark
+          const t = 1 - Math.max(0, Math.min(100, percent)) / 100;
           return mixHex(lightRed, darkRed, t);
         } else {
           const capped = Math.min(200, percent);
-          const t = Math.max(0, Math.min(1, (capped - 100) / 100)); // 0->100, 1->200
+          const t = Math.max(0, Math.min(1, (capped - 100) / 100)); // 0 -> light, 1 -> dark
           return mixHex(lightGreen, darkGreen, t);
         }
       }
 
-      // row limit
       const rowLimit = (config.row_limit && config.row_limit > 0) ? Math.min(config.row_limit, data.length) : data.length;
 
-      // helper to find cell object
       function getCell(row, fieldName) {
         if (!row) return null;
         if (row[fieldName]) return row[fieldName];
@@ -226,12 +201,10 @@ const viz = {
         return key ? row[key] : null;
       }
 
-      // Build body rows
       for (let r = 0; r < rowLimit; r++) {
         const row = data[r];
         const tr = document.createElement("tr");
 
-        // dims
         dims.forEach(d => {
           const td = document.createElement("td");
           td.className = "nh-left";
@@ -246,21 +219,17 @@ const viz = {
           tr.appendChild(td);
         });
 
-        // measures in order
         measuresInfo.forEach(mi => {
           const td = document.createElement("td");
-          // default numeric alignment
           td.className = "nh-num";
           const cell = getCell(row, mi.name);
           let display = "";
-          // prefer Looker's rendered string if present
+
           if (cell && typeof cell.rendered !== "undefined" && cell.rendered !== null && String(cell.rendered).trim() !== "") {
             display = cell.rendered;
           } else if (cell && typeof cell.value !== "undefined" && cell.value !== null) {
             const val = cell.value;
-            // if this measure should be displayed as percent by keyword or group, format it
             if (isPercentByKeyword(mi.sub) || /retention|purchase\s*cr|purchase_cr/i.test((mi.group||""))) {
-              // val may be ratio (0.407) or percent (40.7) depending on source
               let pct;
               if (typeof val === "number") {
                 if (val <= 1.5) pct = val * 100;
@@ -270,7 +239,6 @@ const viz = {
                 display = String(val);
               }
             } else {
-              // numeric default
               if (typeof val === "number") {
                 display = Number(val).toLocaleString(undefined, {maximumFractionDigits:2});
               } else {
@@ -283,18 +251,14 @@ const viz = {
 
           td.innerHTML = display;
 
-          // Conditional formatting for Attainment columns (keyword match)
           const isAttainment = /attainment/i.test(mi.sub) || /attainment/i.test(mi.fullLabel);
           if (isAttainment) {
-            // determine percent as numeric 0..100+
             let percent = null;
             if (cell) {
-              // prefer rendered percent string
               if (cell.rendered && typeof cell.rendered === "string" && cell.rendered.indexOf("%") !== -1) {
                 const parsed = parseFloat(cell.rendered.replace(/[^0-9\.\-]+/g, ""));
                 percent = isNaN(parsed) ? null : parsed;
               } else if (typeof cell.value === "number") {
-                // cell.value might be ratio or percent numeric
                 if (cell.value <= 1.5) percent = cell.value * 100;
                 else percent = cell.value;
               } else if (typeof cell.rendered === "string") {
@@ -305,15 +269,11 @@ const viz = {
             if (percent !== null && !isNaN(percent)) {
               const bg = attainmentColor(percent);
               td.style.background = bg;
-              // text contrast: use white text for dark greens/reds
-              // quick luminance check
-              function luminance(hex) {
-                const c = hexToRgb(hex);
-                return 0.2126*c.r + 0.7152*c.g + 0.0722*c.b;
-              }
+              // improved contrast: compute luminance and choose white text if background dark
               try {
-                const lum = luminance(bg);
-                td.style.color = (lum < 100) ? "white" : "inherit";
+                const c = hexToRgb(bg);
+                const lum = 0.2126*c.r + 0.7152*c.g + 0.0722*c.b;
+                td.style.color = (lum < 120) ? "white" : "inherit";
               } catch(e){}
             }
           }
@@ -332,12 +292,9 @@ const viz = {
     }
   },
 
-  destroy: function(element) {
-    // cleanup if needed
-  }
+  destroy: function(element) { }
 };
 
-// register viz
 if (typeof looker !== "undefined" && looker.plugins && looker.plugins.visualizations) {
   looker.plugins.visualizations.add(viz);
 } else {
