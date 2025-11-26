@@ -18,8 +18,8 @@ const viz = {
         .nh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .nh-table th, .nh-table td { border: 1px solid #e6e6e6; padding: 6px 8px; vertical-align: middle; }
         .nh-table thead th { background: #f5f7fb; font-weight:700; }
-        .nh-top-header { background:#D3D3E8; color: #1A1A1A; font-weight:700; text-align:center; padding:10px 6px; }
-        .nh-sub-header { background:#D3D3E8; color: #1A1A1A; font-weight:600; text-align:center; padding:8px 6px; }
+        .nh-top-header { background:#A7A7CF; color: #1A1A1A; font-weight:700; text-align:center; padding:10px 6px; }
+        .nh-sub-header { background:#A7A7CF; color: #1A1A1A; font-weight:600; text-align:center; padding:8px 6px; }
         .nh-left { text-align:left; font-weight:700; background:#fff; white-space:nowrap; }
         .nh-num { text-align:center; white-space:nowrap; }
         .nh-percent { text-align:center; white-space:nowrap; }
