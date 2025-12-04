@@ -1,10 +1,9 @@
-// Nested Header Table - GAP Narrow (Final Version with vertical gradient)
-
-// Paste as nested_header_table_gap.js (or replace your existing file) and update Looker Main URL.
+// Nested Header Table - GAP Narrow (Discrete 10-band colors, no in-cell gradient)
+// Replace your file with this and use raw URL in Looker (remember to bump ?v=).
 
 const viz = {
-  id: "nested-header-table-gap-narrow",
-  label: "Nested Header Table - GAP Narrow",
+  id: "nested-header-table-gap-narrow-discrete",
+  label: "Nested Header Table - GAP Narrow (Discrete)",
   options: {
     group_prefixes: { type: "string", label: "Group Prefixes (comma separated, optional)", default: "" },
     percentage_columns: { type: "string", label: "Columns to format as percent (comma separated - default: GAP)", default: "GAP" },
@@ -17,16 +16,10 @@ const viz = {
         .nh-container { overflow:auto; max-width:100%; font-family: Inter, Roboto, Arial, sans-serif; }
         .nh-table { width: 100%; border-collapse: collapse; font-size: 12px; }
         .nh-table th, .nh-table td { border: 1px solid #A6A6A6; padding: 6px 8px; vertical-align: middle; }
-        
-        /* Header */
         .nh-table thead th { background: #FAF7ED !important; font-weight:700; }
         .nh-top-header { background:#FAF7ED !important; color: #1F1F1F; font-weight:700; text-align:center; padding:10px 6px; }
         .nh-sub-header { background:#FAF7ED !important; color: #1F1F1F; font-weight:600; text-align:center; padding:8px 6px; }
-
-        /* Left dimension */
         .nh-left { text-align:left; font-weight:700; background:#fff; white-space:nowrap; }
-
-        /* Numeric cells */
         .nh-num { text-align:center; white-space:nowrap; }
         .nh-percent { text-align:center; white-space:nowrap; }
 
@@ -40,13 +33,10 @@ const viz = {
           white-space: nowrap;
         }
 
-        /* Hover */
         .nh-table tbody tr:hover { background: #fbfdff; }
-
         .nh-container { position: relative; }
         .nh-table thead th { position: sticky; top: 0; z-index: 2; }
       </style>
-
       <div class="nh-container">
         <table class="nh-table">
           <thead></thead>
@@ -75,33 +65,58 @@ const viz = {
         return;
       }
 
-
       // --------------------------
-      // GAP COLORING WITH GRADIENT
+      // GAP COLORING - DISCRETE SOLID COLORS (no gradient)
       // --------------------------
-      function gapColor(gapRatio) {
+      function gapColorSolid(gapRatio) {
         if (gapRatio === null || isNaN(gapRatio)) return null;
+        const g = gapRatio * 100; // percent
 
-        const g = gapRatio * 100;  // convert to %
+        // DISCRETE COLORS: positive = red bands (0..>50), negative = green bands (0..<-50)
+        // Reds (from lightest at 0-10 to darkest >50)
+        const RED_0_10  = "#FFE5E5";
+        const RED_10_20 = "#FFCCCC";
+        const RED_20_30 = "#FF9999";
+        const RED_30_40 = "#FF6666";
+        const RED_40_50 = "#CC3333";
+        const RED_50_UP  = "#8B0000";
 
-        // Helper: vertical soft gradient
-        const grad = (light, dark) => `linear-gradient(to bottom, ${light}, ${dark})`;
+        // Greys/Neutrals near zero (optional)
+        const NEUTRAL = "#F7F7F7";
 
-        // RED SCALE (positive = bad)
-        if (g > 50) return grad("#FF6666", "#8B0000");      
-        if (g > 40) return grad("#FF9999", "#B30000");
-        if (g > 30) return grad("#FFBBBB", "#CC3333");
-        if (g > 20) return grad("#FFD5D5", "#FF6666");
-        if (g > 10) return grad("#FFE5E5", "#FF9999");
-        if (g >= 0) return grad("#FFF2F2", "#FFE5E5");
+        // Greens (from lightest 0..-10 to darkest <-50)
+        const GREEN_0_10   = "#ECFFEE";
+        const GREEN_10_20  = "#D7F2D8";
+        const GREEN_20_30  = "#A0DFA7";
+        const GREEN_30_40  = "#7FCC8F";
+        const GREEN_40_50  = "#33A653";
+        const GREEN_50_DOWN = "#0B6623";
 
-        // GREEN SCALE (negative = good)
-        if (g > -10) return grad("#ECFFEE", "#CFF5D1");
-        if (g > -20) return grad("#CFF5D1", "#A0DFA7");
-        if (g > -30) return grad("#A0DFA7", "#7FCC8F");
-        if (g > -40) return grad("#7FCC8F", "#33A653");
-        if (g > -50) return grad("#33A653", "#0B6623");
-        return grad("#0B6623", "#004D00");             
+        // positive (bad) -> red
+        if (g > 50) return RED_50_UP;
+        if (g > 40) return RED_40_50;
+        if (g > 30) return RED_30_40;
+        if (g > 20) return RED_20_30;
+        if (g > 10) return RED_10_20;
+        if (g >= 0)  return RED_0_10;
+
+        // negative (good) -> green
+        if (g > -10) return GREEN_0_10;
+        if (g > -20) return GREEN_10_20;
+        if (g > -30) return GREEN_20_30;
+        if (g > -40) return GREEN_30_40;
+        if (g > -50) return GREEN_40_50;
+        return GREEN_50_DOWN;
+      }
+
+      // contrast helper
+      function hexToRgb(hex) {
+        const h = hex.replace("#","");
+        return { r: parseInt(h.substr(0,2),16), g: parseInt(h.substr(2,2),16), b: parseInt(h.substr(4,2),16) };
+      }
+      function luminance(hex) {
+        const c = hexToRgb(hex);
+        return 0.2126*c.r + 0.7152*c.g + 0.0722*c.b;
       }
 
       // --------------------------
@@ -128,7 +143,6 @@ const viz = {
       const groupOrder = [...new Set(measuresInfo.map(mi => mi.group))];
 
       // ---------------------- HEADER ----------------------
-
       const topRow = document.createElement("tr");
       const leftTop = document.createElement("th");
       leftTop.className = "nh-left";
@@ -144,24 +158,17 @@ const viz = {
         th.innerText = group;
         topRow.appendChild(th);
       });
-
       this._thead.appendChild(topRow);
-
 
       const subRow = document.createElement("tr");
       measuresInfo.forEach(mi => {
         const th = document.createElement("th");
         th.className = "nh-sub-header";
-
         th.innerText = mi.sub;
-
-        // mark GAP columns
         if (/gap/i.test(mi.sub)) th.classList.add("gap-col");
-
         subRow.appendChild(th);
       });
       this._thead.appendChild(subRow);
-
 
       // ---------------------- BODY ----------------------
       const getCell = (row, field) => {
@@ -170,11 +177,10 @@ const viz = {
         return k ? row[k] : null;
       };
 
-
       data.forEach(row => {
         const tr = document.createElement("tr");
 
-        // dimensions
+        // dims
         dims.forEach(d => {
           const td = document.createElement("td");
           td.className = "nh-left";
@@ -182,7 +188,6 @@ const viz = {
           td.innerText = cell?.rendered ?? cell?.value ?? "";
           tr.appendChild(td);
         });
-
 
         // measures
         measuresInfo.forEach(mi => {
@@ -192,42 +197,27 @@ const viz = {
           const cell = getCell(row, mi.name);
           const raw = cell?.value;
           const rendered = cell?.rendered;
-          td.innerHTML = rendered ?? raw ?? "";
+          td.innerHTML = rendered ?? (raw ?? "");
 
-          // GAP DETECTION
           const isGap = /gap/i.test(mi.sub) || /gap/i.test(mi.fullLabel);
           if (isGap) td.classList.add("gap-col");
 
           if (isGap) {
             let gapValue = null;
-
             if (typeof raw === "number") {
-              gapValue = raw; // expecting ratio
+              gapValue = raw; // expecting ratio like 0.12 or -0.05
             } else if (typeof rendered === "string") {
               const n = parseFloat(rendered.replace(/[^0-9\.\-]+/g, ""));
               gapValue = isNaN(n) ? null : n / 100;
             }
 
             if (gapValue !== null) {
-              const bg = gapColor(gapValue);
-              td.style.background = bg;
-
-              // Auto contrast
-              const rgb = (hex) => {
-                const h = hex.replace("#","");
-                return {
-                  r: parseInt(h.substr(0,2),16),
-                  g: parseInt(h.substr(2,2),16),
-                  b: parseInt(h.substr(4,2),16)
-                };
-              };
-
-              const solid = bg.match(/#[0-9A-Fa-f]{6}$/);
-              const base = solid ? solid[0] : "#FFFFFF";
-
-              const c = rgb(base);
-              const lum = 0.2126*c.r + 0.7152*c.g + 0.0722*c.b;
-              td.style.color = lum < 120 ? "white" : "black";
+              const solid = gapColorSolid(gapValue);
+              if (solid) {
+                td.style.background = solid;
+                const lum = luminance(solid);
+                td.style.color = lum < 120 ? "white" : "black";
+              }
             }
           }
 
@@ -247,7 +237,6 @@ const viz = {
 
   destroy() {}
 };
-
 
 if (typeof looker !== "undefined" && looker.plugins && looker.plugins.visualizations) {
   looker.plugins.visualizations.add(viz);
